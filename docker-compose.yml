@@ -1,0 +1,15 @@
+services:
+  backend:
+    build: .
+    container_name: startist_backend
+    restart: always
+    ports:
+      - "${PORT}:${PORT}"
+    env_file:
+      - .env
+    networks:
+      - startist_network
+
+networks:
+  startist_network:
+    external: true

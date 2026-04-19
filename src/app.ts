@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import express, { Application, Request, Response } from 'express'
+import express, { Application, Request, Response, RequestHandler } from 'express'
 import { verificarToken } from './middlewares/auth'
 
 import tecnicasRouter  from './routes/tecnicas'
@@ -16,8 +16,8 @@ app.use('/api/v1/auth',     authRouter)
 app.use('/api/v1/tecnicas', tecnicasRouter)
 app.use('/api/v1/tarjetas', tarjetasRouter)
 
-app.use('/api/v1/proyectos', verificarToken, proyectosRouter)
-app.use('/api/v1/artistas',  verificarToken, artistasRouter)
+app.use('/api/v1/proyectos', verificarToken as unknown as RequestHandler, proyectosRouter)
+app.use('/api/v1/artistas',  verificarToken as unknown as RequestHandler, artistasRouter)
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ status: 'Startist API corriendo' })

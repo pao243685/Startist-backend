@@ -4,18 +4,6 @@ import { Tecnica } from '../interfaces/tecnica.interface'
 import { TecnicaResponseDto } from '../dtos/tecnica.dto'
 import { TarjetaResponseDto } from '../dtos/tarjeta.dto'
 
-export const listarTecnicas = async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const result = await pool.query<TecnicaResponseDto>(
-      'SELECT * FROM tecnica ORDER BY id_tecnica'
-    )
-    res.status(200).json(result.rows)
-  } catch (error) {
-    console.error(error)
-    res.status(400).json({ error: 'Error al listar técnicas' })
-  }
-}
-
 export const obtenerTecnica = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params
   try {

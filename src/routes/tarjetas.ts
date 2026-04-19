@@ -1,18 +1,8 @@
 import { Router } from 'express'
-import {
-  listarTarjetas,
-  obtenerTarjeta,
-  crearTarjeta,
-  editarTarjeta,
-  eliminarTarjeta
-} from '../controllers/tarjetasController'
+import { obtenerTarjeta } from '../controllers/tarjetasController'
 
 const router: Router = Router()
 
-router.get('/',      listarTarjetas)
-router.get('/:id',   obtenerTarjeta)
-router.post('/',     crearTarjeta)
-router.patch('/:id', editarTarjeta)
-router.delete('/:id', eliminarTarjeta)
+router.get('/:id', obtenerTarjeta)
 
 export default router

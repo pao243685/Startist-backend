@@ -1,4 +1,5 @@
 import { Request, Response } from 'express'
+import bcrypt from 'bcrypt'
 import pool from '../db/pool'
 import { Artista } from '../interfaces/artista.interface'
 import { ProyectoResponseDto } from '../dtos/proyecto.dto'
@@ -6,6 +7,8 @@ import {
   UpdateArtistaDto,
   ArtistaResponseDto
 } from '../dtos/artista.dto'
+
+const SALT_ROUNDS = 10
 
 export const listarArtistas = async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -56,15 +59,18 @@ export const editarArtista = async (req: Request, res: Response): Promise<void> 
 
     const actual = existe.rows[0]
     const nuevoNombre      = nombre      ?? actual.nombre
-    const nuevoContrasena  = contrasena  ?? actual.contrasena
     const nuevoDescripcion = descripcion ?? actual.descripcion
+
+    const nuevoHash = contrasena
+      ? await bcrypt.hash(contrasena, SALT_ROUNDS)
+      : actual.contrasena
 
     const result = await pool.query<ArtistaResponseDto>(
       `UPDATE artista
        SET nombre = $1, contrasena = $2, descripcion = $3
        WHERE id_artista = $4
        RETURNING id_artista, nombre, descripcion, fecha_registro`,
-      [nuevoNombre, nuevoContrasena, nuevoDescripcion, id]
+      [nuevoNombre, nuevoHash, nuevoDescripcion, id]
     )
     res.status(200).json(result.rows[0])
   } catch (error) {
@@ -72,7 +78,6 @@ export const editarArtista = async (req: Request, res: Response): Promise<void> 
     res.status(422).json({ error: 'Error al editar artista' })
   }
 }
-
 
 export const listarProyectosDeArtista = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params

@@ -1,9 +1,12 @@
 import { Request, Response } from 'express'
 import jwt, { SignOptions } from 'jsonwebtoken'
+import bcrypt from 'bcrypt'
 import pool from '../db/pool'
 import { Artista } from '../interfaces/artista.interface'
 import { LoginDto, RegisterDto, AuthResponseDto } from '../dtos/auth.dto'
 import { ArtistaResponseDto } from '../dtos/artista.dto'
+
+const SALT_ROUNDS = 10
 
 export const registro = async (req: Request, res: Response): Promise<void> => {
   const { nombre, contrasena, descripcion }: RegisterDto = req.body
@@ -21,12 +24,14 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
       res.status(409).json({ error: 'Ya existe un artista con ese nombre' })
       return
     }
+    
+    const hash = await bcrypt.hash(contrasena, SALT_ROUNDS)
 
     const result = await pool.query<ArtistaResponseDto>(
       `INSERT INTO artista (nombre, contrasena, descripcion)
        VALUES ($1, $2, $3)
        RETURNING id_artista, nombre, descripcion, fecha_registro`,
-      [nombre, contrasena, descripcion ?? null]
+      [nombre, hash, descripcion ?? null]
     )
 
     const artista = result.rows[0]
@@ -34,9 +39,9 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
     const expiresIn = (process.env.JWT_EXPIRES_IN) as SignOptions['expiresIn']
 
     const token = jwt.sign(
-    { id: artista.id_artista, nombre: artista.nombre },
-    process.env.JWT_SECRET as string,
-    { expiresIn }
+      { id: artista.id_artista, nombre: artista.nombre },
+      process.env.JWT_SECRET as string,
+      { expiresIn }
     )
 
     const response: AuthResponseDto = { artista, token }
@@ -67,7 +72,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const artista = result.rows[0]
 
-    if (artista.contrasena !== contrasena) {
+    const valida = await bcrypt.compare(contrasena, artista.contrasena)
+    if (!valida) {
       res.status(401).json({ error: 'Contraseña incorrecta' })
       return
     }
@@ -75,9 +81,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const expiresIn = (process.env.JWT_EXPIRES_IN) as SignOptions['expiresIn']
 
     const token = jwt.sign(
-    { id: artista.id_artista, nombre: artista.nombre },
-    process.env.JWT_SECRET as string,
-    { expiresIn }
+      { id: artista.id_artista, nombre: artista.nombre },
+      process.env.JWT_SECRET as string,
+      { expiresIn }
     )
 
     const response: AuthResponseDto = {

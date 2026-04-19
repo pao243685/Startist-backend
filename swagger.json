@@ -1,0 +1,471 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Startist API",
+    "description": "API REST para la plataforma Startist — gestión de artistas, técnicas, tarjetas de aprendizaje y proyectos creativos. Incluye árbol de habilidades con desbloqueo progresivo e integración con el Met Museum API para galería de inspiración.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Startist Backend"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001/api/v1",
+      "description": "Servidor local"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ArtistaResponse": {
+        "type": "object",
+        "properties": {
+          "id_artista":     { "type": "integer", "example": 1 },
+          "nombre":         { "type": "string",  "example": "Valentina" },
+          "descripcion":    { "type": "string",  "nullable": true, "example": "Artista digital" },
+          "fecha_registro": { "type": "string",  "format": "date-time" }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "artista": { "$ref": "#/components/schemas/ArtistaResponse" },
+          "token":   { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+        }
+      },
+      "TecnicaResponse": {
+        "type": "object",
+        "properties": {
+          "id_tecnica":       { "type": "integer", "example": 1 },
+          "nombre":           { "type": "string",  "example": "Acuarela" },
+          "estado":           { "type": "boolean", "example": true },
+          "tecnica_padre_id": { "type": "integer", "nullable": true, "example": null }
+        }
+      },
+      "TarjetaResponse": {
+        "type": "object",
+        "properties": {
+          "id_tarjeta":       { "type": "integer", "example": 1 },
+          "titulo":           { "type": "string",  "example": "Técnica de aguadas" },
+          "descripcion":      { "type": "string",  "nullable": true },
+          "estado":           { "type": "boolean", "example": true },
+          "tecnica_id":       { "type": "integer", "example": 1 },
+          "tecnica_nombre":   { "type": "string",  "example": "Acuarela" },
+          "tecnica_padre_id": { "type": "integer", "nullable": true, "example": null }
+        }
+      },
+      "ProyectoResponse": {
+        "type": "object",
+        "properties": {
+          "id_proyecto":            { "type": "integer", "example": 1 },
+          "proyecto_titulo":        { "type": "string",  "example": "Mi primera aguada" },
+          "archivo":                { "type": "string",  "example": "https://..." },
+          "proyecto_descripcion":   { "type": "string",  "nullable": true },
+          "id_artista":             { "type": "integer", "example": 1 },
+          "artista_nombre":         { "type": "string",  "example": "Valentina" },
+          "id_tarjeta":             { "type": "integer", "example": 1 },
+          "tarjeta_titulo":         { "type": "string",  "example": "Técnica de aguadas" },
+          "id_tecnica":             { "type": "integer", "example": 1 },
+          "tecnica_nombre":         { "type": "string",  "example": "Acuarela" },
+          "tecnica_padre_id":       { "type": "integer", "nullable": true, "example": null }
+        }
+      },
+      "TecnicaArbol": {
+        "type": "object",
+        "properties": {
+          "id_tecnica":           { "type": "integer", "example": 1 },
+          "nombre":               { "type": "string",  "example": "Acuarela" },
+          "tecnica_padre_id":     { "type": "integer", "nullable": true, "example": null },
+          "desbloqueada":         { "type": "boolean", "example": true },
+          "completada":           { "type": "boolean", "example": false },
+          "total_tarjetas":       { "type": "integer", "example": 5 },
+          "tarjetas_completadas": { "type": "integer", "example": 2 },
+          "tarjetas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id_tarjeta":  { "type": "integer", "example": 1 },
+                "titulo":      { "type": "string",  "example": "Técnica de aguadas" },
+                "descripcion": { "type": "string",  "nullable": true },
+                "completada":  { "type": "boolean", "example": false }
+              }
+            }
+          }
+        }
+      },
+      "ObraGaleria": {
+        "type": "object",
+        "properties": {
+          "id":      { "type": "integer", "example": 452089 },
+          "titulo":  { "type": "string",  "example": "Irises" },
+          "artista": { "type": "string",  "example": "Vincent van Gogh" },
+          "imagen":  { "type": "string",  "example": "https://images.metmuseum.org/..." },
+          "fecha":   { "type": "string",  "example": "1890" },
+          "medio":   { "type": "string",  "example": "Oil on canvas" },
+          "url":     { "type": "string",  "example": "https://www.metmuseum.org/art/collection/search/452089" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "Mensaje de error" }
+        }
+      }
+    }
+  },
+
+  "paths": {
+
+    "/auth/registro": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Registrar nuevo artista",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nombre", "contrasena"],
+                "properties": {
+                  "nombre":      { "type": "string", "example": "Valentina" },
+                  "contrasena":  { "type": "string", "example": "mi_password" },
+                  "descripcion": { "type": "string", "example": "Artista digital" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Artista registrado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "409": { "description": "Ya existe un artista con ese nombre", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "Datos inválidos o faltantes",          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Iniciar sesión",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nombre", "contrasena"],
+                "properties": {
+                  "nombre":     { "type": "string", "example": "Valentina" },
+                  "contrasena": { "type": "string", "example": "mi_password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login exitoso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "401": { "description": "Contraseña incorrecta",   "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Artista no encontrado",   "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "Datos faltantes",         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/tecnicas/{id}": {
+      "get": {
+        "tags": ["Técnicas"],
+        "summary": "Obtener una técnica por ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Técnica encontrada",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TecnicaResponse" } } }
+          },
+          "404": { "description": "Técnica no encontrada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/tecnicas/{id}/tarjetas": {
+      "get": {
+        "tags": ["Técnicas"],
+        "summary": "Listar tarjetas de una técnica",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de tarjetas",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TarjetaResponse" } }
+              }
+            }
+          },
+          "404": { "description": "Técnica no encontrada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/tecnicas/{id}/galeria": {
+      "get": {
+        "tags": ["Técnicas"],
+        "summary": "Galería de inspiración — obras del Met Museum relacionadas a la técnica",
+        "description": "Consume The Metropolitan Museum of Art Collection API para devolver obras de arte reales como material de inspiración para el artista según su técnica actual.",
+        "parameters": [
+          { "name": "id",    "in": "path",  "required": true,  "schema": { "type": "integer" }, "example": 1 },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "default": 10, "maximum": 20 }, "description": "Cantidad de obras a devolver (máx 20)" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Galería de obras de inspiración",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tecnica_id":     { "type": "integer", "example": 1 },
+                    "tecnica_nombre": { "type": "string",  "example": "Acuarela" },
+                    "total":          { "type": "integer", "example": 8 },
+                    "fuente":         { "type": "string",  "example": "The Metropolitan Museum of Art Collection API" },
+                    "obras": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/ObraGaleria" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Técnica no encontrada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/tarjetas/{id}": {
+      "get": {
+        "tags": ["Tarjetas"],
+        "summary": "Obtener una tarjeta por ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarjeta encontrada",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TarjetaResponse" } } }
+          },
+          "404": { "description": "Tarjeta no encontrada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/artistas": {
+      "get": {
+        "tags": ["Artistas"],
+        "summary": "Listar todos los artistas",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Lista de artistas",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ArtistaResponse" } }
+              }
+            }
+          },
+          "401": { "description": "Token no proporcionado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/artistas/{id}": {
+      "get": {
+        "tags": ["Artistas"],
+        "summary": "Obtener un artista por ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artista encontrado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArtistaResponse" } } }
+          },
+          "404": { "description": "Artista no encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "patch": {
+        "tags": ["Artistas"],
+        "summary": "Editar datos del artista",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre":      { "type": "string" },
+                  "contrasena":  { "type": "string" },
+                  "descripcion": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Artista actualizado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArtistaResponse" } } }
+          },
+          "404": { "description": "Artista no encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "Error al editar",        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/artistas/{id}/proyectos": {
+      "get": {
+        "tags": ["Artistas"],
+        "summary": "Listar proyectos de un artista",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de proyectos del artista",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ProyectoResponse" } }
+              }
+            }
+          },
+          "404": { "description": "Artista no encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/proyectos/{id}": {
+      "get": {
+        "tags": ["Proyectos"],
+        "summary": "Obtener un proyecto por ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proyecto encontrado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProyectoResponse" } } }
+          },
+          "404": { "description": "Proyecto no encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Proyectos"],
+        "summary": "Eliminar un proyecto (solo el dueño)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "Proyecto eliminado", "content": { "application/json": { "schema": { "type": "object", "properties": { "mensaje": { "type": "string", "example": "Proyecto eliminado correctamente" } } } } } },
+          "403": { "description": "No puedes eliminar un proyecto que no es tuyo", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Proyecto no encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/proyectos": {
+      "post": {
+        "tags": ["Proyectos"],
+        "summary": "Crear un proyecto (subir obra a una tarjeta desbloqueada)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["titulo", "archivo", "tarjeta_id"],
+                "properties": {
+                  "titulo":      { "type": "string",  "example": "Mi primera aguada" },
+                  "archivo":     { "type": "string",  "example": "https://storage.example.com/obra.jpg" },
+                  "descripcion": { "type": "string",  "example": "Experimento con transparencias" },
+                  "tarjeta_id":  { "type": "integer", "example": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Proyecto creado exitosamente", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProyectoResponse" } } } },
+          "403": { "description": "Tarjeta no desbloqueada aún",  "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Artista o tarjeta no encontrada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Ya subiste un proyecto a esta tarjeta", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "Datos inválidos",               "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/arbol": {
+      "get": {
+        "tags": ["Árbol de Habilidades"],
+        "summary": "Obtener árbol completo de técnicas con progreso del artista autenticado",
+        "description": "Devuelve todas las técnicas con sus tarjetas, indicando cuáles están desbloqueadas y completadas según el progreso del artista autenticado.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Árbol de habilidades con progreso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TecnicaArbol" }
+                }
+              }
+            }
+          },
+          "401": { "description": "No autorizado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    }
+
+  },
+
+  "tags": [
+    { "name": "Auth",                  "description": "Registro e inicio de sesión" },
+    { "name": "Técnicas",              "description": "Técnicas artísticas y galería de inspiración" },
+    { "name": "Tarjetas",              "description": "Tarjetas de aprendizaje por técnica" },
+    { "name": "Artistas",              "description": "Gestión de artistas y sus proyectos" },
+    { "name": "Proyectos",             "description": "Proyectos creativos subidos por artistas" },
+    { "name": "Árbol de Habilidades",  "description": "Árbol de progreso con desbloqueo progresivo" }
+  ]
+}

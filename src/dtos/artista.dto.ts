@@ -1,8 +1,3 @@
-export interface CreateArtistaDto {
-  nombre:       string
-  contrasena:   string
-  descripcion?: string
-}
 
 export interface UpdateArtistaDto {
   nombre?:      string

@@ -5,7 +5,7 @@ export interface CreateProyectoDto {
   artista_id:   number
   tarjeta_id:   number
 }
-
+ 
 export interface UpdateProyectoDto {
   titulo?:      string
   archivo?:     string
@@ -15,13 +15,15 @@ export interface UpdateProyectoDto {
 }
 
 export interface ProyectoResponseDto {
-  id_proyecto:    number
-  titulo:         string
-  archivo:        string
-  descripcion:    string | null
-  artista_id:     number
-  artista_nombre: string
-  tarjeta_id:     number
-  tarjeta_titulo: string
-  tecnica_nombre: string
+  id_proyecto:      number
+  proyecto_titulo:  string
+  archivo:          string
+  proyecto_descripcion: string | null
+  id_artista:       number
+  artista_nombre:   string
+  id_tarjeta:       number
+  tarjeta_titulo:   string
+  id_tecnica:       number
+  tecnica_nombre:   string
+  tecnica_padre_id: number | null
 }

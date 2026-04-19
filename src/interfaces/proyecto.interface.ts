@@ -6,12 +6,13 @@ export interface Proyecto {
   artista_id:  number
   tarjeta_id:  number
 }
-
+ 
 export interface ProyectoCompleto extends Proyecto {
-  artista_nombre:  string
-  tarjeta_titulo:  string
-  tecnica_nombre:  string
-  id_artista:      number
-  id_tarjeta:      number
-  id_tecnica:      number
+  artista_nombre:   string
+  tarjeta_titulo:   string
+  tecnica_nombre:   string
+  id_artista:       number
+  id_tarjeta:       number
+  id_tecnica:       number
+  tecnica_padre_id: number | null
 }

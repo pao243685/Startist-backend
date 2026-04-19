@@ -3,19 +3,8 @@ import pool from '../db/pool'
 import { Proyecto } from '../interfaces/proyecto.interface'
 import { Artista } from '../interfaces/artista.interface'
 import { Tarjeta } from '../interfaces/tarjeta.interface'
-import { CreateProyectoDto, UpdateProyectoDto, ProyectoResponseDto } from '../dtos/proyecto.dto'
-
-export const listarProyectos = async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const result = await pool.query<ProyectoResponseDto>(
-      'SELECT * FROM vista_proyectos ORDER BY id_proyecto'
-    )
-    res.status(200).json(result.rows)
-  } catch (error) {
-    console.error(error)
-    res.status(400).json({ error: 'Error al listar proyectos' })
-  }
-}
+import { CreateProyectoDto, ProyectoResponseDto } from '../dtos/proyecto.dto'
+import { AuthRequest } from '../middlewares/auth'
 
 export const obtenerProyecto = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params
@@ -35,12 +24,14 @@ export const obtenerProyecto = async (req: Request, res: Response): Promise<void
   }
 }
 
-export const crearProyecto = async (req: Request, res: Response): Promise<void> => {
-  const { titulo, archivo, descripcion, artista_id, tarjeta_id }: CreateProyectoDto = req.body
+export const crearProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { titulo, archivo, descripcion, tarjeta_id }: Omit<CreateProyectoDto, 'artista_id'> = req.body
+  const artista_id = req.artista?.id  // viene del token JWT
+
   try {
-    if (!titulo || !archivo || !artista_id || !tarjeta_id) {
+    if (!titulo || !archivo || !tarjeta_id || !artista_id) {
       res.status(422).json({
-        error: 'titulo, archivo, artista_id y tarjeta_id son requeridos'
+        error: 'titulo, archivo y tarjeta_id son requeridos'
       })
       return
     }
@@ -62,6 +53,28 @@ export const crearProyecto = async (req: Request, res: Response): Promise<void> 
       res.status(404).json({ error: 'Tarjeta no encontrada' })
       return
     }
+    const progreso = await pool.query<{ desbloqueada: boolean }>(
+      `SELECT
+        CASE
+          WHEN tc.tecnica_padre_id IS NULL THEN TRUE
+          ELSE (
+            SELECT COUNT(tj2.id_tarjeta) = COUNT(p2.id_proyecto)
+            FROM tarjeta tj2
+            LEFT JOIN proyecto p2 ON p2.tarjeta_id = tj2.id_tarjeta
+              AND p2.artista_id = $1
+            WHERE tj2.tecnica_id = tc.tecnica_padre_id
+          )
+        END AS desbloqueada
+       FROM tarjeta tj
+       JOIN tecnica tc ON tc.id_tecnica = tj.tecnica_id
+       WHERE tj.id_tarjeta = $2`,
+      [artista_id, tarjeta_id]
+    )
+
+    if (!progreso.rows[0]?.desbloqueada) {
+      res.status(403).json({ error: 'Esta tarjeta aún no está desbloqueada' })
+      return
+    }
 
     const result = await pool.query<Proyecto>(
       `INSERT INTO proyecto (titulo, archivo, descripcion, artista_id, tarjeta_id)
@@ -70,58 +83,37 @@ export const crearProyecto = async (req: Request, res: Response): Promise<void> 
       [titulo, archivo, descripcion ?? null, artista_id, tarjeta_id]
     )
     res.status(201).json(result.rows[0])
-  } catch (error) {
+  } catch (error: any) {
+    if (error.code === '23505') {
+      res.status(409).json({ error: 'Ya subiste un proyecto a esta tarjeta' })
+      return
+    }
     console.error(error)
     res.status(422).json({ error: 'Error al crear proyecto' })
   }
 }
 
-export const editarProyecto = async (req: Request, res: Response): Promise<void> => {
+export const eliminarProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params
-  const { titulo, archivo, descripcion, artista_id, tarjeta_id }: UpdateProyectoDto = req.body
+  const artista_id = req.artista?.id
   try {
-    const existe = await pool.query<Proyecto>(
+    const proyecto = await pool.query<Proyecto>(
       'SELECT * FROM proyecto WHERE id_proyecto = $1',
       [id]
     )
-    if (existe.rows.length === 0) {
+    if (proyecto.rows.length === 0) {
       res.status(404).json({ error: 'Proyecto no encontrado' })
       return
     }
+    if (proyecto.rows[0].artista_id !== artista_id) {
+      res.status(403).json({ error: 'No puedes eliminar un proyecto que no es tuyo' })
+      return
+    }
 
-    const actual = existe.rows[0]
-    const nuevoTitulo      = titulo      ?? actual.titulo
-    const nuevoArchivo     = archivo     ?? actual.archivo
-    const nuevoDescripcion = descripcion ?? actual.descripcion
-    const nuevoArtistaId   = artista_id  ?? actual.artista_id
-    const nuevoTarjetaId   = tarjeta_id  ?? actual.tarjeta_id
-
-    const result = await pool.query<Proyecto>(
-      `UPDATE proyecto
-       SET titulo = $1, archivo = $2, descripcion = $3,
-           artista_id = $4, tarjeta_id = $5
-       WHERE id_proyecto = $6
-       RETURNING *`,
-      [nuevoTitulo, nuevoArchivo, nuevoDescripcion, nuevoArtistaId, nuevoTarjetaId, id]
-    )
-    res.status(200).json(result.rows[0])
-  } catch (error) {
-    console.error(error)
-    res.status(422).json({ error: 'Error al editar proyecto' })
-  }
-}
-
-export const eliminarProyecto = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params
-  try {
-    const result = await pool.query<Proyecto>(
-      'DELETE FROM proyecto WHERE id_proyecto = $1 RETURNING *',
+    await pool.query(
+      'DELETE FROM proyecto WHERE id_proyecto = $1',
       [id]
     )
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Proyecto no encontrado' })
-      return
-    }
     res.status(200).json({ mensaje: 'Proyecto eliminado correctamente' })
   } catch (error) {
     console.error(error)

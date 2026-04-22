@@ -12,12 +12,41 @@ const SALT_ROUNDS = 10
 
 export const listarArtistas = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const result = await pool.query<ArtistaResponseDto>(
+    const artistas = await pool.query(
       `SELECT id_artista, nombre, descripcion, fecha_registro
        FROM artista
        ORDER BY id_artista`
     )
-    res.status(200).json(result.rows)
+
+    const tecnicas = await pool.query(
+      `SELECT
+         p.artista_id,
+         t.id_tecnica,
+         t.nombre
+       FROM tecnica t
+       JOIN tarjeta tj ON tj.tecnica_id = t.id_tecnica
+       JOIN proyecto p ON p.tarjeta_id  = tj.id_tarjeta
+       GROUP BY p.artista_id, t.id_tecnica, t.nombre
+       HAVING COUNT(tj.id_tarjeta) = COUNT(p.id_proyecto)`
+    )
+
+    const tecnicasPorArtista = new Map<number, any[]>()
+    for (const t of tecnicas.rows) {
+      if (!tecnicasPorArtista.has(t.artista_id)) {
+        tecnicasPorArtista.set(t.artista_id, [])
+      }
+      tecnicasPorArtista.get(t.artista_id)!.push({
+        id_tecnica: t.id_tecnica,
+        nombre: t.nombre
+      })
+    }
+
+    const resultado = artistas.rows.map(a => ({
+      ...a,
+      tecnicas_completadas: tecnicasPorArtista.get(a.id_artista) ?? []
+    }))
+
+    res.status(200).json(resultado)
   } catch (error) {
     console.error(error)
     res.status(400).json({ error: 'Error al listar artistas' })

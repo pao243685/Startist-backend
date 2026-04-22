@@ -10,7 +10,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3001/api/v1",
+      "url": "https://startist-backend-production.up.railway.app/api/v1",
       "description": "Servidor local"
     }
   ],

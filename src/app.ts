@@ -10,10 +10,13 @@ import artistasRouter  from './routes/artistas'
 import authRouter      from './routes/auth'
 import arbolRouter     from './routes/arbol'
 import cors from 'cors'
+import path from 'path'
 
 const app: Application = express()
 app.use(cors())
 app.use(express.json())
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
 app.use('/api/v1/auth',     authRouter)
 app.use('/api/v1/tecnicas', tecnicasRouter)

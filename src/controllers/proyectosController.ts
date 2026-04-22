@@ -25,14 +25,20 @@ export const obtenerProyecto = async (req: Request, res: Response): Promise<void
 }
 
 export const crearProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { titulo, archivo, descripcion, tarjeta_id }: Omit<CreateProyectoDto, 'artista_id'> = req.body
-  const artista_id = req.artista?.id  // viene del token JWT
+  const { titulo, descripcion, tarjeta_id } = req.body
+  const artista_id = req.artista?.id
+
+  const file = req.file
+  if (!file) {
+    res.status(422).json({ error: 'El archivo es requerido' })
+    return
+  }
+
+  const archivo = `/uploads/${file.filename}`
 
   try {
-    if (!titulo || !archivo || !tarjeta_id || !artista_id) {
-      res.status(422).json({
-        error: 'titulo, archivo y tarjeta_id son requeridos'
-      })
+    if (!titulo || !tarjeta_id || !artista_id) {
+      res.status(422).json({ error: 'titulo y tarjeta_id son requeridos' })
       return
     }
 
@@ -53,6 +59,7 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
       res.status(404).json({ error: 'Tarjeta no encontrada' })
       return
     }
+
     const progreso = await pool.query<{ desbloqueada: boolean }>(
       `SELECT
         CASE
